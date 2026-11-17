@@ -1,0 +1,114 @@
+# Three containers: the website (nginx serving the Vite build), the API (Express) and the database (MongoDB).
+#   cp .env.example .env    then fill in REVIEW_SECRET, MONGO_PASSWORD, MONGO_APP_PASSWORD, DATA_KEY and PUBLIC_URL
+# Build 82.1 security: the database is on a private network only the API can reach (never published to the
+# internet); the API signs in with its own least-privilege user; containers cannot gain extra privileges.
+# See docs/go-live/17-SECURITY.md.
+#   docker compose up -d --build
+# The website is then on http://localhost:8080 (put your HTTPS proxy or load balancer in front of it) and the
+# super admin panel on http://localhost:8080/admin. First Super Admin (no default login, build 78.3):
+#   docker compose exec backend npm run admin -- create-super-admin --email you@frequentresearch.com --name "Your Name"
+# Using a hosted MongoDB (Atlas or your own server) instead: set MONGODB_URI in .env and remove the mongo service.
+services:
+  mongo:
+    image: registry.sampledge.com/db/mongo
+    restart: ${RESTART}
+    networks:
+      - frequent
+    volumes:
+      - ./db/config:/data/configdb
+      - ./db/backup:/backup
+      - ./db/store:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    image: registry.sampledge.com/frequent-research/backend:${TARGET}-${VERSION-1.0.0}
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://frapp@mongo:27017/frequentresearch
+      MONGODB_DB: ${MONGODB_DB:-frequentresearch}
+      REVIEW_SECRET: ${REVIEW_SECRET:?set REVIEW_SECRET in .env}
+      KEYS_SECRET: ${KEYS_SECRET:-}
+      DATA_KEY: ${DATA_KEY:-}
+      DATA_KEY_OLD: ${DATA_KEY_OLD:-}
+      ONBOARDING_SECRET: ${ONBOARDING_SECRET:-}
+      ADMIN_EMAIL_DOMAINS: ${ADMIN_EMAIL_DOMAINS:-frequentresearch.com}
+      PUBLISH_MODE: ${PUBLISH_MODE:-manual}
+      LEADS: ${LEADS:-on}
+      LEAD_WEBHOOK: ${LEAD_WEBHOOK:-}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      UPLOAD_MB: ${UPLOAD_MB:-20}
+      # build 78: email, social media, AI, SampCrew (docs/go-live/12-MARKETING-AND-KEYS.md)
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
+      MAIL_NOTIFY: ${MAIL_NOTIFY:-}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_PER_MINUTE: ${MAIL_PER_MINUTE:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+      FB_PAGE_ID: ${FB_PAGE_ID:-}
+      FB_PAGE_TOKEN: ${FB_PAGE_TOKEN:-}
+      IG_USER_ID: ${IG_USER_ID:-}
+      IG_TOKEN: ${IG_TOKEN:-}
+      LINKEDIN_AUTHOR_URN: ${LINKEDIN_AUTHOR_URN:-}
+      LINKEDIN_TOKEN: ${LINKEDIN_TOKEN:-}
+      X_API_KEY: ${X_API_KEY:-}
+      X_API_SECRET: ${X_API_SECRET:-}
+      X_ACCESS_TOKEN: ${X_ACCESS_TOKEN:-}
+      X_ACCESS_SECRET: ${X_ACCESS_SECRET:-}
+      SOCIAL_WEBHOOK: ${SOCIAL_WEBHOOK:-}
+      SAMPCREW_API_URL: ${SAMPCREW_API_URL:-}
+      SAMPCREW_API_KEY: ${SAMPCREW_API_KEY:-}
+      SAMPCREW_WEBHOOK_SECRET: ${SAMPCREW_WEBHOOK_SECRET:-}
+      FB_GRAPH_VERSION: ${FB_GRAPH_VERSION:-}
+      LINKEDIN_VERSION: ${LINKEDIN_VERSION:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    expose:
+      - "8787"
+    networks:
+      - frequent
+    read_only: true   # the API keeps nothing on disk; backups go to the volume below
+    tmpfs: [/tmp]
+    volumes:
+      - fr-backups:/backups   # docker compose exec backend npm run backup -- /backups
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  frontend:
+    image: registry.sampledge.com/frequent-research/frontend:${TARGET}-${VERSION-1.0.0}
+    build:
+      context: ./frontend
+      args:
+        PRERENDER: ${PRERENDER:-1}
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:8787
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - backend
+    networks: [frequent]
+    security_opt: ["no-new-privileges:true"]
+
+networks:
+  frequent:
+    internal: true    # no internet in or out: only the API talks to MongoDB
+
+volumes:
+  fr-backups:
+  fr-mongo:
