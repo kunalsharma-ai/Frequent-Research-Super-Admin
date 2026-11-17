@@ -13,6 +13,9 @@ import { AdmChat, AdmDashboard, AdmLeads, AdmReviews, AdmVisits } from './Inbox.
 import { AdmCelebrations, AdmGallery, AdmListEditor, AdmObjectEditor, AdmPanels, AdmPdfs, AdmSettings } from './Content.jsx';
 import { AdmPageEditor } from './PageEditor.jsx';
 import { AdmPageVideos } from './PageVideos.jsx';
+// build 83: page videos for every page with its own design, and the directory of every page
+import { AdmPageVideos83 } from './PageVideos83.jsx';
+import { AdmAllPages83 } from './AllPages83.jsx';
 import { AdmActivity, AdmAllContent, AdmFiles } from './System.jsx';
 import { AdmCardDesigns, AdmCases, AdmForms, AdmLegal, AdmLogos, AdmMenus, AdmNewPages, AdmPages } from './Builder.jsx';
 import { AdmAi, AdmAutomations, AdmCampaigns, AdmContacts, AdmEmails, AdmKeys, AdmSocial } from './Marketing.jsx';
@@ -34,7 +37,7 @@ const NAV = [
   ["Inbox", [["leads", "Leads", "✉"], ["contacts", "Contacts & form counts", "◉"], ["chat", "Live chat", "💬"], ["reviews", "Reviews", "★"]]],
   // build 78: pages, sections and menus
   ["Pages", [
-    ["pages", "Pages & sections", "▦"], ["new-pages", "New pages", "＋"], ["menus", "Header & footer menus", "☰"], ["edit", "Edit on the page", "✎"],
+    ["all-pages", "All website pages", "⌂"], ["pages", "Pages & sections", "▦"], ["new-pages", "New pages", "＋"], ["menus", "Header & footer menus", "☰"], ["edit", "Edit on the page", "✎"],
     ["logos", "Logos", "◈"], ["legal", "Legal & policies", "§"], ["seo", "SEO & redirects", "⌕"],
   ]],
   ["Website content", [
@@ -42,7 +45,7 @@ const NAV = [
     ["team", "Team", "👥"], ["testimonials", "Client testimonials", "❝"], ["blogs", "Blog posts", "✍"], ["cards", "Card designs", "▭"], ["cases", "Case studies", "▤"],
     ["products", "Products", "◆"], ["portals", "Panel portals", "◎"], ["careers", "Careers", "💼"], ["downloads", "Downloads list", "⬇"], ["certifications", "Certifications", "✔"], ["associations", "Associations (ESOMAR…)", "◇"],
     ["af", "Accounts & Finance prices", "₹"], ["panels", "Panel numbers", "#"], ["pdfs", "PDF documents", "▤"], ["forms", "Forms", "☑"],
-    ["videos", "Page videos", "▶"], ["celebrations", "Celebration calendar", "✦"], ["gallery", "Gallery", "▣"],
+    ["videos", "Page videos", "▶"], ["videos-classic", "Page videos (classic list)", "▷"], ["celebrations", "Celebration calendar", "✦"], ["gallery", "Gallery", "▣"],
   ]],
   ["Marketing", [["emails", "Email templates", "✉"], ["automations", "Email automations", "⟳"], ["newsletters", "Newsletters", "📰"], ["social", "Social media", "📣"], ["ai", "AI assistant", "✨"]]],
   ["System", [["api", "API", "⇄"], ["keys", "Connections & keys", "🔑"], ["files", "Files", "🗂"], ["content", "All content", "{ }"]]],
@@ -52,7 +55,7 @@ const NAV = [
 // the area each section belongs to: the section shows for admins who may view that area (or have extra access in it)
 const AREA = {
   visits: "activity", activity: "activity", leads: ["enquiries", "careers"], contacts: "marketing", chat: "enquiries", reviews: "enquiries",
-  pages: "pages", "new-pages": "pages", menus: "menus", edit: "pages", logos: "menus", legal: "legal", seo: "seo",
+  pages: "pages", "all-pages": "pages", "videos-classic": "pages", "new-pages": "pages", menus: "menus", edit: "pages", logos: "menus", legal: "legal", seo: "seo",
   settings: "settings", contact: "company", team: "company", testimonials: "company", blogs: "blog", cards: "blog", cases: "blog",
   products: "products", portals: "products", careers: "company", downloads: "products", certifications: "company", associations: "company",
   af: "products", panels: "panels", pdfs: "products", forms: "forms", videos: "pages", celebrations: "settings", gallery: "company",
@@ -92,7 +95,9 @@ function section(id, go) {
     case "pdfs": return <AdmPdfs />;
     case "celebrations": return <AdmCelebrations />;
     case "gallery": return <AdmGallery />;
-    case "videos": return <AdmPageVideos />;
+    case "videos": return <AdmPageVideos83 />;
+    case "videos-classic": return <AdmPageVideos />;
+    case "all-pages": return <AdmAllPages83 go={go} />;
     case "contacts": return <AdmContacts go={go} />;
     case "pages": return <AdmPages go={go} />;
     case "new-pages": return <AdmNewPages />;
